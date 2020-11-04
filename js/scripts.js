@@ -35,22 +35,29 @@ jQuery(document).ready(function ($) {
         new Date().getMonth(),
         res
       );
-      document.querySelector("#calendar3").onchange = function Kalendar3() {
-        Calendar3(
-          "calendar3",
-          document.querySelector("#calendar3 input").value,
-          parseFloat(
-            document.querySelector("#calendar3 select").options[
-              document.querySelector("#calendar3 select").selectedIndex
-            ].value
-          ),
-          res
-        );
-      };
+
+      if ($("#calendar3").length) {
+        document.querySelector("#calendar3").onchange = function Kalendar3() {
+          Calendar3(
+            "calendar3",
+            document.querySelector("#calendar3 input").value,
+            parseFloat(
+              document.querySelector("#calendar3 select").options[
+                document.querySelector("#calendar3 select").selectedIndex
+              ].value
+            ),
+            res
+          );
+        };
+      }
     },
   });
 
   function Calendar3(id, year, month, res) {
+    if (!$("#calendar3").length) {
+      return;
+    }
+
     var res = res;
     var Dlast = new Date(year, month + 1, 0).getDate(),
       D = new Date(year, month, Dlast),
@@ -161,4 +168,117 @@ jQuery(document).ready(function ($) {
     load_posts();
     $(this).insertAfter("#ajax-posts"); // Move the 'Load More' button to the end
   });
+
+  /* SEARCH */
+  class Search {
+    constructor() {
+      this.resultsDiv = $("#overlay-results");
+      this.openButton = $(".search-open");
+      this.closeButton = $(".search-close");
+      this.searchOverlay = $(".search-overlay");
+      this.searchInput = $("#search-term");
+      this.eventheading = $('.result-headings');
+      this.guests = $('.guests');
+      this.submitFilters = $('#filter-submit');
+      this.typingTimer;
+      this.events();
+    }
+
+    events() {
+      this.openButton.on("click", this.openOverlay.bind(this));
+      this.closeButton.on("click", this.closeOverlay.bind(this));
+
+      this.searchInput.on("input", this.typing.bind(this));
+      this.submitFilters.on('click', function(e) {e.preventDefault()});
+      this.submitFilters.on('click', this.getResults.bind(this));
+    }
+
+    openOverlay() {
+      this.searchOverlay.addClass("search-overlay-active");
+      $("body").addClass("noscroll");
+      this.searchInput.focus();
+    }
+
+    closeOverlay() {
+      this.searchOverlay.removeClass("search-overlay-active");
+      $("body").removeClass("noscroll");
+      this.searchInput.val('');
+      this.resultsDiv.html('');
+    }
+
+    typing() {
+      clearTimeout(this.typingTimer);
+      this.typingTimer = setTimeout(this.getResults.bind(this), 300);
+    }
+
+    getResults() {
+      // date
+      let fromDate = new Date($('#date-from').val());
+      let toDate = new Date($('#date-to').val());
+
+      if(fromDate != 'Invalid Date') {
+        fromDate = fromDate.getFullYear() + '-' + String(fromDate.getMonth() + 1) + '-' + fromDate.getDate();
+        toDate = toDate.getFullYear() + '-' + String(toDate.getMonth() + 1) + '-' + toDate.getDate();
+      } else {
+        fromDate = 0;
+        toDate = 0;
+      }
+
+      // importance
+
+      let impArr = {
+        terms: []
+      };
+      $(".importance").each(function(){
+        if(this.checked) {
+          impArr.terms.push(parseInt(this.value));
+        }
+      });
+
+      console.log(impArr);
+
+      if(impArr.terms.length) {
+        impArr = encodeURIComponent(JSON.stringify(impArr));
+      } else {
+        impArr = 0;
+      }
+
+      console.log(impArr);
+
+      if(this.searchInput.val().length >= 3) {
+        $.getJSON(peSearch.root + '/wp-json/pe/v1/search?term=' + this.searchInput.val() + '&toDate=' + toDate + '&fromDate=' + fromDate + '&impArr=' + impArr, data => {
+          this.resultsDiv.html(`
+          ${data.length ? '<ul class="results-ul">' : '<p>Not found</p>'}
+            ${data.map(item => `
+              <li>
+                <div class="result-headings">
+                <h2>
+                  <a id="heading-link" href="${item.permalink}">${item.title}</a>
+                </h2>
+                </div>
+                <div class="related-posts">
+                  ${item.meta.map( relPost => `
+                  <a href="${relPost.relLink}">${relPost.relTitle}</a><br>
+                  `).join('')}
+                </div>
+                ${item.person.length ? '<div class="guests guests-hidden">' : ''}
+                  ${item.person.length ? item.person.map( person => `
+                    ${person.name}<br>
+                    ${person.surname}<br>
+                    ${person.url}<br><br>
+                  `).join('') : ''}
+                  ${item.person.length ? '</div>' : ''}
+              </li><hr>`).join('')}
+            ${data.length ? '</ul>' : ''}`
+          );
+        }, () => {this.resultsDiv.html('Try again')});
+      }
+
+      if(!this.searchInput.val().length < 3) {
+        this.resultsDiv.html('');
+      }
+    }
+  }
+
+  const search = new Search();
 });

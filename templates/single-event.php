@@ -4,9 +4,9 @@
  */
 
 get_header(); ?>
-<style type="text/css"> 
-    <?php echo get_option('css_field'); ?>
-</style> <?php
+    <?php
+    display_search_bar();
+    
     while ( have_posts() ) : the_post(); 	$events_with_date = get_posts([
 		'post_type' => 'pastevents',
 		'post_status' => 'publish',

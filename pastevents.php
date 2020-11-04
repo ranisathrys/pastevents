@@ -1,8 +1,9 @@
 <?php
 /* 
- * Plugin Name: Past Events
+ * Plugin Name: past events
  */ 
 
+include( plugin_dir_path( __FILE__ ) . 'inc/search-route.php');
 
 //POST TYPE
 add_action( 'init', 'pe_post_type' );
@@ -27,6 +28,7 @@ function pe_post_type(){
 		'show_ui'             => true,
 		'show_in_menu'        => null,
 		'show_in_admin_bar'   => true,
+		'show_in_rest'		  => true,	
 		'menu_position'       => 6,
 		'menu_icon'           => 'dashicons-calendar',
 		'capability_type'   => 'post',
@@ -70,17 +72,38 @@ register_activation_hook(__FILE__, 'install_events_pg');
 //STYLE AND SCRIPTS
 function pe_add_scripts() {
 	if( is_page('Past Events Archive') || is_singular('pastevents')) {
-		wp_enqueue_style('events_css', plugins_url('style.css',__FILE__ ), array(), '');
+		wp_enqueue_style('events_css', plugins_url('style.css',__FILE__ ), array('fontawesome'), '');
 	}
-	wp_enqueue_style('calendar_css', plugins_url('calendar.css',__FILE__ ), array(), '');
-	wp_enqueue_script('events_js', plugins_url('scripts.js',__FILE__ ), array('jquery'), '', true);
+	wp_enqueue_style('calendar_css', plugins_url('/css/calendar.css',__FILE__ ), array(), '');
+	wp_enqueue_script('events_js', plugins_url('/js/scripts.js',__FILE__ ), array('jquery'), '', true);
 
+	//select2
+	wp_enqueue_style('select2css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css', array(), '4.1.0');
+	wp_enqueue_script('select2js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js', array(), '4.1.0', true);
+
+	wp_enqueue_style('fontawesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css', array(), '5.10.0');
+
+	//Like
 	wp_localize_script( 'events_js', 'myAjax', array( 'ajaxurl' => admin_url( 'admin-ajax.php' )));
+	//Calendar meta
 	wp_localize_script( 'events_js', 'metaAjax', array( 'ajaxurl' => admin_url( 'admin-ajax.php'), 'archLink' => get_permalink( get_page_by_path( 'past-events-archive' ) )));
-	wp_localize_script( 'events_js', 'loadMore', array('ajaxurl' => admin_url( 'admin-ajax.php' ), 'noposts' => __('No older posts found')));	
+	//Load more
+	wp_localize_script( 'events_js', 'loadMore', array('ajaxurl' => admin_url( 'admin-ajax.php' ), 'noposts' => __('No older posts found')));
+	//Search
+	wp_localize_script( 'events_js', 'peSearch', array( 'root' => get_site_url(), 'ajaxurl' => admin_url( 'admin-ajax.php' ) ));
 }
 
 add_action('wp_enqueue_scripts', 'pe_add_scripts');
+
+function pe_add_admin_scripts() {
+	//select2
+	wp_enqueue_style('select2css', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/css/select2.min.css', array(), '4.1.0');
+	wp_enqueue_script('select2js', 'https://cdn.jsdelivr.net/npm/select2@4.1.0-beta.1/dist/js/select2.min.js', array(), '4.1.0', true);
+
+	wp_enqueue_script('admin_js', plugins_url('/js/admin.js',__FILE__ ), array('jquery'), null, true);
+}
+
+add_action('admin_enqueue_scripts', 'pe_add_admin_scripts');
 
 //IMAGE SIZE
 add_image_size('event', 300, 200, true);
@@ -102,6 +125,8 @@ class pe_Widget extends WP_Widget {
 		$title = apply_filters( 'widget_title', $instance['title'] );
  
 		echo $args['before_widget'];
+
+		//CALENDAR HERE
 		?>
 		<section>
 			<?php
@@ -158,7 +183,7 @@ class pe_Widget extends WP_Widget {
 function event_calendar_load() {
 	register_widget( 'pe_Widget' );
 }
-add_action( 'widgets_init', 'event_calendar_load' );
+add_action( 'widgets_init', 'event_calendar_load' ); //action
 
 //QUERY META
 
@@ -343,7 +368,7 @@ function ep_eventposts_save_meta( $post_id, $post ) {
     if ( !wp_verify_nonce( $_POST['ep_eventposts_nonce'], plugin_basename( __FILE__ ) ) )
         return;
   
-    // Is the user allowed to edit
+    // Is the user allowed to edit the post or page?
     if ( !current_user_can( 'edit_post', $post->ID ) )
         return;
   
@@ -364,9 +389,9 @@ function ep_eventposts_save_meta( $post_id, $post ) {
   
     // Add values of $events_meta as custom fields
   
-    foreach ( $events_meta as $key => $value ) {
+    foreach ( $events_meta as $key => $value ) { // Cycle through the $events_meta array!
         if ( $post->post_type == 'revision' ) return; // Don't store custom data twice
-        $value = implode( ',', (array)$value ); // If $value is an array, make it a CSV
+        $value = implode( ',', (array)$value ); // If $value is an array, make it a CSV (unlikely)
         if ( get_post_meta( $post->ID, $key, FALSE ) ) { // If the custom field already has a value
             update_post_meta( $post->ID, $key, $value );
         } else { // If the custom field doesn't have a value
@@ -611,7 +636,7 @@ function event_like() {
 	// fetch like_count for a post, set it to 0 if it's empty, increment by 1 when a click is registered 
 	$like_count = get_post_meta($_REQUEST["post_id"], "likes", true);
 	$like_count = ($like_count == '') ? 0 : $like_count;
-	// add user check
+	//add user check
 	$user_meta = get_user_meta(get_current_user_id(), 'liked', false);
 	if( !in_array($_REQUEST["post_id"], $user_meta)) {
 		$new_like_count = $like_count + 1;
@@ -728,3 +753,254 @@ class EventsCLI
 
 WP_CLI::add_command('past-events', 'EventsCLI');
 }
+
+//USER ROLE
+function pe_add_roles() {
+	add_role( 'pe_editor', 'Редактор Подій', array(
+		'read'            => true,
+        'create_posts'    => true,
+		'edit_posts'      => true,
+		'edit_pages'	  => true	
+		) 
+	);
+}
+register_activation_hook( __FILE__, 'pe_add_roles' );
+
+// Add Metaboxes
+add_action('admin_init', 'pe_add_meta_boxes', 1);
+function pe_add_meta_boxes() {
+	add_meta_box( 'repeatable-fields', 'Repeatable Fields', 'repeatable_meta_box_display', 'pastevents', 'normal', 'default');
+	add_meta_box( 'related_posts', 'Related Posts', 'pe_related_posts_display', 'pastevents', 'normal', 'default');
+}
+
+//REPEATER
+function repeatable_meta_box_display() {
+	global $post;
+
+	$repeatable_fields = get_post_meta($post->ID, 'repeatable_fields', true);
+
+	wp_nonce_field( 'repeatable_meta_box_nonce', 'repeatable_meta_box_nonce' );
+	?>
+	<script type="text/javascript">
+	jQuery(document).ready(function( $ ){
+		$( '#add-row' ).on('click', function() {
+			var row = $( '.empty-row.screen-reader-text' ).clone(true);
+			row.removeClass( 'empty-row screen-reader-text' );
+			row.insertBefore( '#repeatable-fieldset-one tbody>tr:last' );
+			return false;
+		});
+  	
+		$( '.remove-row' ).on('click', function() {
+			$(this).parents('tr').remove();
+			return false;
+		});
+	});
+	</script>
+  
+	<table id="repeatable-fieldset-one" width="100%">
+	<thead>
+		<tr>
+			<th width="30%">Name</th>
+			<th width="30%">Surname</th>
+			<th width="30%">Social Media URL</th>
+			<th width="10%"></th>
+		</tr>
+	</thead>
+	<tbody>
+	<?php
+	
+	if ( $repeatable_fields ) :
+	
+	foreach ( $repeatable_fields as $field ) {
+	?>
+	<tr>
+		<td><input type="text" class="widefat" name="name[]" value="<?php if($field['name'] != '') echo esc_attr( $field['name'] ); ?>" /></td>
+
+		<td><input type="text" class="widefat" name="surname[]" value="<?php if($field['surname'] != '') echo esc_attr( $field['surname'] ); ?>" /></td>
+	
+		<td><input type="text" class="widefat" name="url[]" value="<?php if ($field['url'] != '') echo esc_attr( $field['url'] ); else echo 'http://'; ?>" /></td>
+	
+		<td><a class="button remove-row" href="#">Remove</a></td>
+	</tr>
+	<?php
+	}
+	else :
+	// blank
+	?>
+	<tr>
+		<td><input type="text" class="widefat" name="name[]" /></td>
+
+		<td><input type="text" class="widefat" name="surname[]" /></td>
+	
+		<td><input type="text" class="widefat" name="url[]" value="http://" /></td>
+	
+		<td><a class="button remove-row" href="#">Remove</a></td>
+	</tr>
+	<?php endif; ?>
+	
+	<!-- empty hidden one for jQuery -->
+	<tr class="empty-row screen-reader-text">
+		<td><input type="text" class="widefat" name="name[]" /></td>
+
+		<td><input type="text" class="widefat" name="surname[]" /></td>
+	
+		<td><input type="text" class="widefat" name="url[]" value="http://" /></td>
+		  
+		<td><a class="button remove-row" href="#">Remove</a></td>
+	</tr>
+	</tbody>
+	</table>
+	
+	<p><a id="add-row" class="button" href="#">Add another</a></p>
+	<?php
+}
+
+add_action('save_post', 'repeatable_meta_box_save');
+function repeatable_meta_box_save($post_id) {
+	if ( ! isset( $_POST['repeatable_meta_box_nonce'] ) ||
+	! wp_verify_nonce( $_POST['repeatable_meta_box_nonce'], 'repeatable_meta_box_nonce' ) )
+		return;
+	
+	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+		return;
+	
+	if (!current_user_can('edit_post', $post_id))
+		return;
+	
+	$old = get_post_meta($post_id, 'repeatable_fields', true);
+	$new = array();
+	
+	$names = $_POST['name'];
+	$surnames = $_POST['surname'];
+	$urls = $_POST['url'];
+	
+	$count = count( $names );
+	
+	for ( $i = 0; $i < $count; $i++ ) {
+		if ( $names[$i] != '' ) :
+			$new[$i]['name'] = stripslashes( strip_tags( $names[$i] ) );
+
+			if ( $surnames[$i] == '' )
+				$new[$i]['surname'] = '';
+			else
+				$new[$i]['surname'] = stripslashes( $surnames[$i] );
+		
+			if ( $urls[$i] == 'http://' )
+				$new[$i]['url'] = '';
+			else
+				$new[$i]['url'] = stripslashes( $urls[$i] );
+		endif;
+	}
+
+	if ( !empty( $new ) && $new != $old )
+		update_post_meta( $post_id, 'repeatable_fields', $new );
+	elseif ( empty($new) && $old )
+		delete_post_meta( $post_id, 'repeatable_fields', $old );
+}
+
+//RELATED POSTS
+function pe_related_posts_display($post) {
+
+	wp_nonce_field( plugin_basename( __FILE__ ), 'pe_nonce' );
+	
+	$related_posts = get_posts( 
+		array(
+			'post_type' => 'post',
+			'posts_per_page' => -1
+		) 
+	);
+
+	?>
+	<select width="100%" class="js-example-basic-multiple" name="related_posts[]" multiple="multiple"> <?php
+		foreach( $related_posts as $related_post ) { 
+			$title = $related_post->post_title;
+			$id = $related_post->ID;
+			?>
+			<option 
+				value="<?php echo $id; ?>"
+				<?php
+				$meta = array(get_post_meta( $post->ID, 'related_posts', true ));
+				if(in_array($id, $meta) ) echo ' selected'; ?> 
+			>
+					<?php echo $title; ?>
+			</option>
+		<?php }
+  	?> 
+	</select>
+
+  <?php
+
+}
+
+add_action('save_post', 'pe_multiple_meta_box_save');
+function pe_multiple_meta_box_save($post_id) {
+	if ( !isset( $_POST['pe_nonce'] ) )
+    return;
+  
+    if ( !wp_verify_nonce( $_POST['pe_nonce'], plugin_basename( __FILE__ ) ) )
+        return;
+	
+	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+		return;
+	
+	if (!current_user_can('edit_post', $post_id))
+		return;
+	
+	$related = $_POST['related_posts'];
+
+	if( isset( $related ) )
+		update_post_meta( $post_id, 'related_posts', $related );
+	else
+		delete_post_meta( $post_id, 'related_posts' );
+
+}
+
+//SEARCH
+
+// Display search html
+
+function display_search_bar() { ?>
+	<div class="search-bar">
+		<i class="fas fa-search search-open"></i>
+	</div>
+
+	<div class="search-overlay">
+		<div class="search-overlay-top">
+			<div class="container">
+				<i class="fas fa-search"></i>
+				<input type="text" class="search-term" id="search-term">
+				<i class="far fa-window-close search-close"></i>
+			</div>
+		</div>
+
+		<div class="filter-form">
+			<form method="post" class="filter">
+				<div class="checkboxes">
+				<label for="importance">Select event importance:</label>
+					<input class="importance" type="checkbox" name="importance[]" value="1" class="importance-check"> 1
+					<input class="importance" type="checkbox" name="importance[]" value="2" class="importance-check"> 2
+					<input class="importance" type="checkbox" name="importance[]" value="3" class="importance-check"> 3
+					<input class="importance" type="checkbox" name="importance[]" value="4" class="importance-check"> 4
+					<input class="importance" type="checkbox" name="importance[]" value="5" class="importance-check"> 5
+				</div>
+
+				<div class="date-range">
+					<label>Select date range:</label>
+					From
+					<input type="date" name="date-from" id="date-from">
+					To
+					<input type="date" name="date-to" id="date-to">
+				</div>
+				<input type="submit" value="Submit" id="filter-submit">
+			</form>
+			<div id="submit-ajax"></div>
+
+		</div>
+
+		<div class="results-container">
+			<div id="overlay-results">
+				<!-- results here -->
+			</div>
+		</div>
+	</div>
+<?php }

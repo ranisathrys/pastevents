@@ -4,7 +4,9 @@
 
     <main class="main-cont" id="ajax-posts"> 
     
-            <?php echo get_the_content(); ?>
+            <?php
+            display_search_bar();
+            echo get_the_content(); ?>
 		
 			<?php
             $events_to_show = get_option('event_count');
