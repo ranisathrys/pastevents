@@ -17,6 +17,11 @@ function pe_search_results($data) {
 
     // TO DO: think of a better way to check for params
 
+    if($data['impArr']) {
+        $importance = $data['impArr'];
+        $i = json_decode(urldecode($importance), true);
+    }
+
     if((int) $data['toDate'] === 0 && (int) $data['fromDate'] === 0 && (int) $data['impArr'] === 0) {
         $events = new WP_Query(array(
             'post_type'      => 'pastevents',
@@ -24,10 +29,8 @@ function pe_search_results($data) {
             's'              => sanitize_text_field($data['term'])
         ));
     }
-   
+    
     if($data['impArr'] && (int) $data['toDate'] === 0 && (int) $data['fromDate'] === 0) { 
-        $importance = $data['impArr'];
-        $i = json_decode(urldecode($importance), true);
         
         $events = new WP_Query(array(
             'post_type'      => 'pastevents',
@@ -43,7 +46,7 @@ function pe_search_results($data) {
         ));
 
     }
- 
+    
     if(!$data['impArr'] && (int) $data['toDate'] != 0 && (int) $data['fromDate'] != 0) {
         $events = new WP_Query(array(
             'post_type'      => 'pastevents',
@@ -59,7 +62,7 @@ function pe_search_results($data) {
             ),  
         ));
     }
-
+    
     if($data['impArr'] && (int) $data['toDate'] != 0 && (int) $data['fromDate'] != 0) {
         $importance = $data['impArr'];
         $i = json_decode(urldecode($importance), true);
@@ -74,6 +77,58 @@ function pe_search_results($data) {
                     'key' => '_start_eventdatestamp',
                     'value' => [$from, $to],
                     'compare' => 'BETWEEN'
+                )
+            ),
+            'tax_query' => array(
+                array(
+                    'taxonomy' => 'importance',
+                    'field'    => 'name',
+                    'terms'    => $i['terms'],
+                ),
+            ), 
+        ));
+    } 
+    
+    if($data['impArr'] && (int) $data['toDate'] != 0 && (int) $data['fromDate'] === 0) {
+        $importance = $data['impArr'];
+        $i = json_decode(urldecode($importance), true);
+
+        $events = new WP_Query(array(
+            'post_type'      => 'pastevents',
+            'posts_per_page' => -1,
+            's'              => sanitize_text_field($data['term']),
+            'meta_query' => array(
+                array(
+                    'type' => 'DATE',
+                    'key' => '_start_eventdatestamp',
+                    'value' => $to,
+                    'compare' => '<='
+                )
+            ),
+            'tax_query' => array(
+                array(
+                    'taxonomy' => 'importance',
+                    'field'    => 'name',
+                    'terms'    => $i['terms'],
+                ),
+            ), 
+        ));
+    }
+    
+    if($data['impArr'] && (int) $data['toDate'] === 0 && (int) $data['fromDate'] != 0) {
+        $importance = $data['impArr'];
+        $i = json_decode(urldecode($importance), true);
+
+        $events = new WP_Query(array(
+            'post_type'      => 'pastevents',
+            'posts_per_page' => -1,
+            's'              => sanitize_text_field($data['term']),
+            'meta_query' => array(
+                array(
+                    'type' => 'DATE',
+                    'key' => '_start_eventdatestamp',
+                    'value' => $from,
+                    'compare' => '>='
                 )
             ),
             'tax_query' => array(
@@ -109,7 +164,6 @@ function pe_search_results($data) {
             'permalink' => get_the_permalink(),
             'meta'      => $relDetails,
             'person'    => get_post_meta(get_the_ID(), 'repeatable_fields', true),
-            'date'      => get_post_meta(get_the_ID(), '_start_eventdatestamp'),
         ));
     }
 

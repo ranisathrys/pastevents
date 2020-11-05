@@ -177,8 +177,6 @@ jQuery(document).ready(function ($) {
       this.closeButton = $(".search-close");
       this.searchOverlay = $(".search-overlay");
       this.searchInput = $("#search-term");
-      this.eventheading = $('.result-headings');
-      this.guests = $('.guests');
       this.submitFilters = $('#filter-submit');
       this.typingTimer;
       this.events();
@@ -235,15 +233,11 @@ jQuery(document).ready(function ($) {
         }
       });
 
-      console.log(impArr);
-
       if(impArr.terms.length) {
         impArr = encodeURIComponent(JSON.stringify(impArr));
       } else {
         impArr = 0;
       }
-
-      console.log(impArr);
 
       if(this.searchInput.val().length >= 3) {
         $.getJSON(peSearch.root + '/wp-json/pe/v1/search?term=' + this.searchInput.val() + '&toDate=' + toDate + '&fromDate=' + fromDate + '&impArr=' + impArr, data => {
@@ -261,7 +255,7 @@ jQuery(document).ready(function ($) {
                   <a href="${relPost.relLink}">${relPost.relTitle}</a><br>
                   `).join('')}
                 </div>
-                ${item.person.length ? '<div class="guests guests-hidden">' : ''}
+                ${item.person.length ? '<div class="guests">' : ''}
                   ${item.person.length ? item.person.map( person => `
                     ${person.name}<br>
                     ${person.surname}<br>

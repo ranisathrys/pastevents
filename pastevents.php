@@ -757,10 +757,16 @@ WP_CLI::add_command('past-events', 'EventsCLI');
 //USER ROLE
 function pe_add_roles() {
 	add_role( 'pe_editor', 'Редактор Подій', array(
-		'read'            => true,
-        'create_posts'    => true,
-		'edit_posts'      => true,
-		'edit_pages'	  => true	
+		'read'            		=> true,
+        'create_posts'    		=> true,
+		'edit_posts'      		=> true,
+		'edit_pages'	  		=> true,
+		'edit_others_pages' 	=> true,
+		'edit_others_posts' 	=> true,
+		'publish_pages'   		=> true,
+		'publish_posts'			=> true,
+		'edit_published_pages'  => true,
+		'edit_published_posts'  => true
 		) 
 	);
 }
