@@ -916,16 +916,17 @@ function pe_related_posts_display($post) {
 		) 
 	);
 
-	?>
+	$meta = get_post_meta( $post->ID, 'related_posts', true ); ?>
+
 	<select width="100%" class="js-example-basic-multiple" name="related_posts[]" multiple="multiple"> <?php
 		foreach( $related_posts as $related_post ) { 
 			$title = $related_post->post_title;
 			$id = $related_post->ID;
 			?>
+
 			<option 
 				value="<?php echo $id; ?>"
 				<?php
-				$meta = array(get_post_meta( $post->ID, 'related_posts', true ));
 				if(in_array($id, $meta) ) echo ' selected'; ?> 
 			>
 					<?php echo $title; ?>

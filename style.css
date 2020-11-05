@@ -218,7 +218,7 @@ footer {
   display: block;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(225, 225, 225, 0.9);
+  background-color: rgba(225, 225, 225,1);
   position: fixed;
   z-index: 99999;
   top: 0;
@@ -263,7 +263,7 @@ footer {
 
 .results-container {
 	position: absolute;
-	top: 300px;
+	top: 170px;
 	width: 100vw;
 }
 
@@ -315,7 +315,7 @@ footer {
 
 .guests {
   display: block;
-  min-height: 10vh !important;
+  min-height: 5vh !important;
   width: 33%;
   float: left;
   padding: 15px 10px;
@@ -360,7 +360,7 @@ footer {
 }
 
 h2 {
-  font-size: 24px !important;
+  font-size: 18px !important;
 }
 
 .guests-hidden {
