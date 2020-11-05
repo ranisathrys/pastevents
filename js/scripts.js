@@ -214,6 +214,7 @@ jQuery(document).ready(function ($) {
       let fromDate = new Date($('#date-from').val());
       let toDate = new Date($('#date-to').val());
 
+      // concatenate date to get appropriate format 'y-m-d' for future comparison with meta values in db
       if(fromDate != 'Invalid Date') {
         fromDate = fromDate.getFullYear() + '-' + String(fromDate.getMonth() + 1) + '-' + fromDate.getDate();
         toDate = toDate.getFullYear() + '-' + String(toDate.getMonth() + 1) + '-' + toDate.getDate();
@@ -223,7 +224,7 @@ jQuery(document).ready(function ($) {
       }
 
       // importance
-
+      // create an object that contains values of checked inputs
       let impArr = {
         terms: []
       };
@@ -233,14 +234,17 @@ jQuery(document).ready(function ($) {
         }
       });
 
+      // encode the importance object to send it as a parameter
       if(impArr.terms.length) {
         impArr = encodeURIComponent(JSON.stringify(impArr));
       } else {
         impArr = 0;
       }
 
+      // fetch json data from the search endpoint
       if(this.searchInput.val().length >= 3) {
         $.getJSON(peSearch.root + '/wp-json/pe/v1/search?term=' + this.searchInput.val() + '&toDate=' + toDate + '&fromDate=' + fromDate + '&impArr=' + impArr, data => {
+          // insert search result html, map values dynamically
           this.resultsDiv.html(`
           ${data.length ? '<ul class="results-ul">' : '<p>Not found</p>'}
             ${data.map(item => `
@@ -268,6 +272,7 @@ jQuery(document).ready(function ($) {
         }, () => {this.resultsDiv.html('Try again')});
       }
 
+      // empty results when no input detected 
       if(!this.searchInput.val().length < 3) {
         this.resultsDiv.html('');
       }
